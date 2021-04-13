@@ -1,9 +1,11 @@
 package mapper
 
 import (
+	"fmt"
+	"net/url"
+	"reflect"
 	"testing"
 
-	"github.com/tuffnerdstuff/hauk-snitch/hauk"
 	"github.com/tuffnerdstuff/hauk-snitch/mqtt"
 )
 
@@ -24,18 +26,21 @@ func TestMapMessageToLocation_InputOK_OutputOK(t *testing.T) {
 	body["tid"] = "dy"
 	body["tst"] = 1.618243873e+09
 	body["vac"] = 3
-	body["vel"] = 0
+	body["vel"] = 42
 
 	// when
-	givenLocation, _ := CreateLocationFromMessage(mqtt.Message{Topic: "owntracks/user/device", Body: body})
+	givenLocation, _ := createLocationParamsFromMessage(mqtt.Message{Topic: "owntracks/user/device", Body: body})
 
 	// then
-	expectedLocation := hauk.Location{
-		Latitude:  body["lat"].(float64),
-		Longitude: body["lon"].(float64),
-		Time:      body["tst"].(float64),
+	expectedLocation := url.Values{
+		"lat":  {fmt.Sprintf("%v", body["lat"])},
+		"lon":  {fmt.Sprintf("%v", body["lon"])},
+		"acc":  {fmt.Sprintf("%v", body["acc"])},
+		"alt":  {fmt.Sprintf("%v", body["alt"])},
+		"spd":  {fmt.Sprintf("%v", body["vel"])},
+		"time": {fmt.Sprintf("%v", body["tst"])},
 	}
-	if givenLocation != expectedLocation {
+	if !reflect.DeepEqual(givenLocation, expectedLocation) {
 		t.Fatalf("Locations do not match!\nGiven:%v\nExpected:%v", givenLocation, expectedLocation)
 	}
 
@@ -46,7 +51,7 @@ func TestMapMessageToLocation_TypeNotLocation_Error(t *testing.T) {
 	body["_type"] = "somethingelse"
 
 	// when
-	_, err := CreateLocationFromMessage(mqtt.Message{Topic: "owntracks/user/device", Body: body})
+	_, err := createLocationParamsFromMessage(mqtt.Message{Topic: "owntracks/user/device", Body: body})
 
 	// then: expect error
 	if err == nil {

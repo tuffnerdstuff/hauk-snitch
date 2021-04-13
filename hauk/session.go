@@ -4,4 +4,5 @@ package hauk
 type Session struct {
 	ID  string
 	SID string
+	URL string
 }

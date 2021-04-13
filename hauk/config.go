@@ -15,6 +15,9 @@ const CreateResponseIndexStatus = 0
 // CreateResponseIndexSID is the line index of the SID in the repsonse body
 const CreateResponseIndexSID = 1
 
+// CreateResponseIndexURL is the line index of the session URL in the repsonse body
+const CreateResponseIndexURL = 2
+
 // CreateResponseIndexID is the line index of the ID in the response body
 const CreateResponseIndexID = 3
 

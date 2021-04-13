@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
@@ -23,6 +24,7 @@ func New(config Config) *Client {
 
 // Connect connects to mqtt broker using the given config
 func (t *Client) Connect() {
+	log.Printf("Connecting to mqtt broker %s\n", formatBrokerURL(t.config.Host, t.config.Port, t.config.IsTLS))
 	t.initClient()
 	t.connectClient()
 	t.subscribeClient()

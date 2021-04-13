@@ -21,6 +21,8 @@ func main() {
 	runHaukClient()
 	runMqttClient()
 
+	mapper.Run(mqttClient.Messages, haukClient)
+
 }
 
 func handleInterrupt() {
@@ -37,26 +39,11 @@ func handleInterrupt() {
 
 func runMqttClient() {
 	mqttConfig := config.GetMqttConfig()
-	log.Printf("%v\n", mqttConfig)
 	mqttClient = mqtt.New(mqttConfig)
 	mqttClient.Connect()
-
-	for message := range mqttClient.Messages {
-		location, err := mapper.CreateLocationFromMessage(message)
-		if err != nil {
-			log.Printf("Message does not contain valid location")
-			continue
-		}
-
-		err = haukClient.PostLocation(message.Topic, location)
-		if err != nil {
-			log.Printf("Problem posting location: %v", err)
-		}
-	}
 }
 
 func runHaukClient() {
 	haukConfig := config.GetHaukConfig()
-	log.Printf("%v\n", haukConfig)
 	haukClient = hauk.New(haukConfig)
 }
