@@ -38,7 +38,7 @@ func (t *Client) CreateSession() (Session, error) {
 
 	body, err := getBodyString(response)
 	if err != nil {
-		return session, fmt.Errorf("Could not get session body")
+		return session, err
 	}
 
 	bodyLines := strings.Split(body, "\n")
@@ -60,6 +60,19 @@ func (t *Client) PostLocation(sid string, params url.Values) error {
 	// Send
 	response, err := t.httpClient.PostForm(t.formatURL(EndpointPost), params)
 	err = getPostError(response, err, "location")
+	if err != nil {
+		return err
+	}
+	// Parse body
+	body, err := getBodyString(response)
+	if err != nil {
+		return err
+	}
+
+	// If session expired hauk returns Status 200 (OK) but "Session expired!"
+	if strings.TrimSpace(body) == "Session expired!" {
+		err = &SessionExpiredError{}
+	}
 	return err
 
 }
@@ -76,6 +89,9 @@ func (t *Client) formatURL(endpoint string) string {
 
 func getBodyString(response *http.Response) (string, error) {
 	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		err = fmt.Errorf("Could not get session body: %w", err)
+	}
 	return string(body), err
 }
 

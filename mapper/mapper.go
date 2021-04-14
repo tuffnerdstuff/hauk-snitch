@@ -21,6 +21,7 @@ var keyMap = map[string]string{
 }
 
 var topicSessionMap = make(map[string]hauk.Session)
+var NewSessionsChannel = make(chan TopicSession)
 
 // Run maps mqtt messages to hauk API calls
 func Run(messages <-chan mqtt.Message, haukClient *hauk.Client) {
@@ -33,7 +34,7 @@ func Run(messages <-chan mqtt.Message, haukClient *hauk.Client) {
 
 		sid, err := getCurrentSIDForTopic(message.Topic, haukClient)
 		if err != nil {
-			log.Printf("%v", err.Error())
+			log.Printf("%v\n", err.Error())
 			continue
 		}
 		err = haukClient.PostLocation(sid, locationParams)
@@ -41,9 +42,16 @@ func Run(messages <-chan mqtt.Message, haukClient *hauk.Client) {
 			switch err.(type) {
 			case *hauk.SessionExpiredError:
 				log.Printf("Session for %s expired, creating new one\n", message.Topic)
-				if _, err := createNewSIDForTopic(message.Topic, haukClient); err != nil {
+				var newSID string
+				if newSID, err = createNewSIDForTopic(message.Topic, haukClient); err != nil {
 					log.Printf("%v", err.Error())
 					continue
+				}
+				// re-send location
+				log.Println("Re-posting location to new session")
+				err = haukClient.PostLocation(newSID, locationParams)
+				if err != nil {
+					log.Printf("Re-posting failed, skipping: %v\n", err)
 				}
 			default:
 				log.Printf("Invalid location %v: %v\n", locationParams, err.Error())
@@ -82,6 +90,7 @@ func createNewSIDForTopic(topic string, haukClient *hauk.Client) (string, error)
 		return "n/a", err
 	}
 	topicSessionMap[topic] = newSession
+	NewSessionsChannel <- TopicSession{Topic: topic, URL: newSession.URL}
 
 	// Print QR code on terminal
 	log.Printf("New session for %s: %v", topic, newSession)

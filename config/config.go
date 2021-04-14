@@ -4,15 +4,16 @@ import (
 	"fmt"
 
 	"github.com/spf13/viper"
+	"github.com/tuffnerdstuff/hauk-snitch/frontend"
 	"github.com/tuffnerdstuff/hauk-snitch/hauk"
 	"github.com/tuffnerdstuff/hauk-snitch/mqtt"
 )
 
 // LoadConfig loads config.toml
 func LoadConfig() {
-
 	setMqttDefaults()
 	setHaukDefaults()
+	setFrontendDefaults()
 	readConfigFromFile()
 }
 
@@ -40,6 +41,16 @@ func GetHaukConfig() hauk.Config {
 	haukConfig.Duration = viper.GetInt("hauk.duration")
 	haukConfig.Interval = viper.GetInt("hauk.interval")
 	return haukConfig
+}
+
+// GetFrontendConfig returns a struct containing frontend config values
+func GetFrontendConfig() frontend.Config {
+	var frontendConfig frontend.Config
+	frontendConfig.Port = viper.GetInt("frontend.port")
+	frontendConfig.User = viper.GetString("frontend.user")
+	frontendConfig.Password = viper.GetString("frontend.password")
+	frontendConfig.IsAnonymous = viper.GetBool("frontend.anonymous")
+	return frontendConfig
 }
 
 func readConfigFromFile() {
@@ -71,4 +82,11 @@ func setHaukDefaults() {
 	viper.SetDefault("hauk.tls", false)
 	viper.SetDefault("hauk.duration", 3600) // 1 hour
 	viper.SetDefault("hauk.interval", 1)    // Every second
+}
+
+func setFrontendDefaults() {
+	viper.SetDefault("frontend.port", 8080)
+	viper.SetDefault("frontend.user", "")
+	viper.SetDefault("frontend.password", "")
+	viper.SetDefault("frontend.anonymous", true)
 }
