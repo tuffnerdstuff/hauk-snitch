@@ -3,10 +3,12 @@ package mapper
 import (
 	"fmt"
 	"log"
+	"net/smtp"
 	"net/url"
 	"os"
 
 	"github.com/mdp/qrterminal"
+	"github.com/spf13/viper"
 	"github.com/tuffnerdstuff/hauk-snitch/hauk"
 	"github.com/tuffnerdstuff/hauk-snitch/mqtt"
 )
@@ -92,6 +94,9 @@ func createNewSIDForTopic(topic string, haukClient *hauk.Client) (string, error)
 	topicSessionMap[topic] = newSession
 	NewSessionsChannel <- TopicSession{Topic: topic, URL: newSession.URL}
 
+	// send email notification
+	sendEmailNotification(topic, newSession.URL)
+
 	// Print QR code on terminal
 	log.Printf("New session for %s: %v", topic, newSession)
 	qrterminal.GenerateHalfBlock(newSession.URL, qrterminal.L, os.Stdout)
@@ -103,5 +108,13 @@ func setHaukValue(haukValues *url.Values, key string, value interface{}) {
 	haukKey, hasMapping := keyMap[key]
 	if hasMapping {
 		haukValues.Add(haukKey, fmt.Sprintf("%v", value))
+	}
+}
+
+func sendEmailNotification(topic string, URL string) {
+	host := fmt.Sprintf("%s:%d", viper.GetString("mapper.smtp_host"), viper.GetInt("mapper.smtp_port"))
+	err := smtp.SendMail(host, nil, viper.GetString("mapper.from"), []string{viper.GetString("mapper.to")}, []byte(fmt.Sprintf("Subject: Forwarding %s to Hauk\r\n\r\nNew session: %s", topic, URL)))
+	if err != nil {
+		log.Printf("Could not send email notification: %v", err)
 	}
 }
