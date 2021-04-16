@@ -13,13 +13,20 @@ import (
 	"github.com/tuffnerdstuff/hauk-snitch/mqtt"
 )
 
-var keyMap = map[string]string{
-	"acc": "acc",
-	"alt": "alt",
-	"lat": "lat",
-	"lon": "lon",
-	"vel": "spd",
-	"tst": "time",
+// TODO: Refactor (make it a struct)
+
+type valueMapping struct {
+	haukKey         string
+	mappingFunction func(value interface{}) string
+}
+
+var keyMap = map[string]valueMapping{
+	"acc": {"acc", nil},
+	"alt": {"alt", nil},
+	"lat": {"lat", nil},
+	"lon": {"lon", nil},
+	"vel": {"spd", nil},
+	"tst": {"time", func(value interface{}) string { return fmt.Sprintf("%d", int64(value.(float64))) }},
 }
 
 var topicSessionMap = make(map[string]hauk.Session)
@@ -28,6 +35,7 @@ var NewSessionsChannel = make(chan TopicSession)
 // Run maps mqtt messages to hauk API calls
 func Run(messages <-chan mqtt.Message, haukClient *hauk.Client) {
 	for message := range messages {
+		//fmt.Printf("Topic: %v\nBody: %v", message.Topic, message.Body)
 		locationParams, err := createLocationParamsFromMessage(message)
 		if err != nil {
 			log.Printf("Message invalid, skipping: %s\n", err.Error())
@@ -105,9 +113,15 @@ func createNewSIDForTopic(topic string, haukClient *hauk.Client) (string, error)
 }
 
 func setHaukValue(haukValues *url.Values, key string, value interface{}) {
-	haukKey, hasMapping := keyMap[key]
+	valueMapping, hasMapping := keyMap[key]
 	if hasMapping {
-		haukValues.Add(haukKey, fmt.Sprintf("%v", value))
+		var convertedValue string
+		if valueMapping.mappingFunction != nil {
+			convertedValue = valueMapping.mappingFunction(value)
+		} else {
+			convertedValue = fmt.Sprintf("%v", value)
+		}
+		haukValues.Add(valueMapping.haukKey, convertedValue)
 	}
 }
 

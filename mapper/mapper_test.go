@@ -11,6 +11,43 @@ import (
 
 func TestMapMessageToLocation_InputOK_OutputOK(t *testing.T) {
 	// given: mqtt message
+	body := createValidLocationBody()
+	// when
+	givenLocation, _ := createLocationParamsFromMessage(mqtt.Message{Topic: "owntracks/user/device", Body: body})
+
+	// then
+	expectedLocation := url.Values{
+		"lat":  {fmt.Sprintf("%v", body["lat"])},
+		"lon":  {fmt.Sprintf("%v", body["lon"])},
+		"acc":  {fmt.Sprintf("%v", body["acc"])},
+		"alt":  {fmt.Sprintf("%v", body["alt"])},
+		"spd":  {fmt.Sprintf("%v", body["vel"])},
+		"time": {fmt.Sprintf("%v", int64(body["tst"].(float64)))},
+	}
+	if !reflect.DeepEqual(givenLocation, expectedLocation) {
+		t.Fatalf("Locations do not match!\nGiven:%v\nExpected:%v", givenLocation, expectedLocation)
+	}
+
+}
+
+func TestMapMessageToLocation_TypeNotLocation_Error(t *testing.T) {
+	// given: type is not location
+	body := make(map[string]interface{})
+	body["_type"] = "somethingelse"
+
+	// when
+	_, err := createLocationParamsFromMessage(mqtt.Message{Topic: "owntracks/user/device", Body: body})
+
+	// then: expect error
+	if err == nil {
+		t.Fatalf("Should return error")
+	} else if err.Error() != "Type is not location" {
+		t.Fatalf("Expected error informing user that _type != location")
+	}
+
+}
+
+func createValidLocationBody() map[string]interface{} {
 	body := make(map[string]interface{})
 	body["_type"] = "location"
 	body["acc"] = 5
@@ -27,37 +64,5 @@ func TestMapMessageToLocation_InputOK_OutputOK(t *testing.T) {
 	body["tst"] = 1.618243873e+09
 	body["vac"] = 3
 	body["vel"] = 42
-
-	// when
-	givenLocation, _ := createLocationParamsFromMessage(mqtt.Message{Topic: "owntracks/user/device", Body: body})
-
-	// then
-	expectedLocation := url.Values{
-		"lat":  {fmt.Sprintf("%v", body["lat"])},
-		"lon":  {fmt.Sprintf("%v", body["lon"])},
-		"acc":  {fmt.Sprintf("%v", body["acc"])},
-		"alt":  {fmt.Sprintf("%v", body["alt"])},
-		"spd":  {fmt.Sprintf("%v", body["vel"])},
-		"time": {fmt.Sprintf("%v", body["tst"])},
-	}
-	if !reflect.DeepEqual(givenLocation, expectedLocation) {
-		t.Fatalf("Locations do not match!\nGiven:%v\nExpected:%v", givenLocation, expectedLocation)
-	}
-
-}
-func TestMapMessageToLocation_TypeNotLocation_Error(t *testing.T) {
-	// given: type is not location
-	body := make(map[string]interface{})
-	body["_type"] = "somethingelse"
-
-	// when
-	_, err := createLocationParamsFromMessage(mqtt.Message{Topic: "owntracks/user/device", Body: body})
-
-	// then: expect error
-	if err == nil {
-		t.Fatalf("Should return error")
-	} else if err.Error() != "Type is not location" {
-		t.Fatalf("Expected error informing user that _type != location")
-	}
-
+	return body
 }
