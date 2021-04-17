@@ -6,14 +6,14 @@ import (
 	"os/signal"
 
 	"github.com/tuffnerdstuff/hauk-snitch/config"
-	"github.com/tuffnerdstuff/hauk-snitch/frontend"
 	"github.com/tuffnerdstuff/hauk-snitch/hauk"
-	"github.com/tuffnerdstuff/hauk-snitch/mapper"
+	m "github.com/tuffnerdstuff/hauk-snitch/mapper"
 	"github.com/tuffnerdstuff/hauk-snitch/mqtt"
 )
 
 var mqttClient *mqtt.Client
 var haukClient hauk.Client
+var mapper m.Mapper
 
 func main() {
 	handleInterrupt()
@@ -22,7 +22,6 @@ func main() {
 	runHaukClient()
 	runMqttClient()
 	runMapper()
-	runFrontend()
 
 }
 
@@ -50,10 +49,7 @@ func runHaukClient() {
 }
 
 func runMapper() {
-	go mapper.Run(mqttClient.Messages, haukClient)
-}
-
-func runFrontend() {
-	frontend := frontend.New(config.GetFrontendConfig())
-	frontend.Run(mapper.NewSessionsChannel)
+	notificationConfig := config.GetNotificationConfig()
+	mapper = m.New(notificationConfig, haukClient)
+	mapper.Run(mqttClient.Messages, haukClient)
 }

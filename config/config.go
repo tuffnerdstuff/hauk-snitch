@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/viper"
-	"github.com/tuffnerdstuff/hauk-snitch/frontend"
 	"github.com/tuffnerdstuff/hauk-snitch/hauk"
+	"github.com/tuffnerdstuff/hauk-snitch/mapper"
 	"github.com/tuffnerdstuff/hauk-snitch/mqtt"
 )
 
@@ -13,7 +13,7 @@ import (
 func LoadConfig() {
 	setMqttDefaults()
 	setHaukDefaults()
-	setFrontendDefaults()
+	setNotificationDefaults()
 	readConfigFromFile()
 }
 
@@ -43,14 +43,15 @@ func GetHaukConfig() hauk.Config {
 	return haukConfig
 }
 
-// GetFrontendConfig returns a struct containing frontend config values
-func GetFrontendConfig() frontend.Config {
-	var frontendConfig frontend.Config
-	frontendConfig.Port = viper.GetInt("frontend.port")
-	frontendConfig.User = viper.GetString("frontend.user")
-	frontendConfig.Password = viper.GetString("frontend.password")
-	frontendConfig.IsAnonymous = viper.GetBool("frontend.anonymous")
-	return frontendConfig
+// GetNotificationConfig returns a struct containing email notification configuration
+func GetNotificationConfig() mapper.NotificationConfig {
+	var notificationConfig mapper.NotificationConfig
+	notificationConfig.Enabled = viper.GetBool("notification.enabled")
+	notificationConfig.Host = viper.GetString("notification.smtp_host")
+	notificationConfig.Port = viper.GetInt("notification.smtp_port")
+	notificationConfig.From = viper.GetString("notification.from")
+	notificationConfig.To = viper.GetString("notification.to")
+	return notificationConfig
 }
 
 func readConfigFromFile() {
@@ -84,9 +85,10 @@ func setHaukDefaults() {
 	viper.SetDefault("hauk.interval", 1)    // Every second
 }
 
-func setFrontendDefaults() {
-	viper.SetDefault("frontend.port", 8080)
-	viper.SetDefault("frontend.user", "")
-	viper.SetDefault("frontend.password", "")
-	viper.SetDefault("frontend.anonymous", true)
+func setNotificationDefaults() {
+	viper.SetDefault("notification.enabled", false)
+	viper.SetDefault("notification.smtp_host", "localhost")
+	viper.SetDefault("notification.smtp_port", 25)
+	viper.SetDefault("notification.from", "noreply@hauk-snitch.local")
+	viper.SetDefault("notification.to", "")
 }

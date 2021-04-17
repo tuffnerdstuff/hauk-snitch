@@ -8,37 +8,40 @@ import (
 	"os"
 
 	"github.com/mdp/qrterminal"
-	"github.com/spf13/viper"
 	"github.com/tuffnerdstuff/hauk-snitch/hauk"
 	"github.com/tuffnerdstuff/hauk-snitch/mqtt"
 )
 
-// TODO: Refactor (make it a struct)
+// Mapper orchestrates incoming locations via mqtt and outgoing calls to Hauk
+type Mapper struct {
+	topicSessionMap    map[string]hauk.Session
+	haukClient         hauk.Client
+	notificationConfig NotificationConfig
+}
 
 type valueMapping struct {
 	haukKey         string
 	mappingFunction func(value interface{}) string
 }
 
-var keyMap = map[string]valueMapping{
-	"acc": {"acc", nil},
-	"alt": {"alt", nil},
-	"lat": {"lat", nil},
-	"lon": {"lon", nil},
-	"vel": {"spd", nil},
-	"tst": {"time", func(value interface{}) string { return fmt.Sprintf("%d", int64(value.(float64))) }},
+var mqttToHaukKeyMap = map[string]valueMapping{
+	mqtt.ParamAccuracy:  {hauk.ParamAccuracy, nil},
+	mqtt.ParamAltitude:  {hauk.ParamAltitude, nil},
+	mqtt.ParamLatitude:  {hauk.ParamLatitude, nil},
+	mqtt.ParamLongitude: {hauk.ParamLongitude, nil},
+	mqtt.ParamVelocity:  {hauk.ParamVelocity, nil},
+	mqtt.ParamTime:      {hauk.ParamTime, func(value interface{}) string { return fmt.Sprintf("%d", int64(value.(float64))) }},
 }
 
-var topicSessionMap map[string]hauk.Session
-var NewSessionsChannel = make(chan TopicSession)
+// New creates a new instance of the mapper orchestrating mqtt and Hauk
+func New(notificationConfig NotificationConfig, haukClient hauk.Client) Mapper {
+	return Mapper{topicSessionMap: make(map[string]hauk.Session), haukClient: haukClient, notificationConfig: notificationConfig}
+}
 
 // Run maps mqtt messages to hauk API calls
-func Run(messages <-chan mqtt.Message, haukClient hauk.Client) {
-
-	topicSessionMap = make(map[string]hauk.Session)
+func (t *Mapper) Run(messages <-chan mqtt.Message, haukClient hauk.Client) {
 
 	for message := range messages {
-		//fmt.Printf("Topic: %v\nBody: %v", message.Topic, message.Body)
 		locationParams, err := createLocationParamsFromMessage(message)
 		if err != nil {
 			log.Printf("Message invalid, skipping: %s\n", err.Error())
@@ -46,10 +49,10 @@ func Run(messages <-chan mqtt.Message, haukClient hauk.Client) {
 		}
 
 		var sid string
-		if message.Body["t"] == "u" {
-			sid, err = createNewSIDForTopic(message.Topic, haukClient)
+		if message.Body[mqtt.ParamTrigger] == mqtt.TriggerManual {
+			sid, err = t.createNewSIDForTopic(message.Topic)
 		} else {
-			sid, err = getCurrentSIDForTopic(message.Topic, haukClient)
+			sid, err = t.getCurrentSIDForTopic(message.Topic)
 		}
 		if err != nil {
 			log.Printf("%v\n", err.Error())
@@ -61,7 +64,7 @@ func Run(messages <-chan mqtt.Message, haukClient hauk.Client) {
 			case *hauk.SessionExpiredError:
 				log.Printf("Session for %s expired, creating new one\n", message.Topic)
 				var newSID string
-				if newSID, err = createNewSIDForTopic(message.Topic, haukClient); err != nil {
+				if newSID, err = t.createNewSIDForTopic(message.Topic); err != nil {
 					log.Printf("%v", err.Error())
 					continue
 				}
@@ -79,6 +82,43 @@ func Run(messages <-chan mqtt.Message, haukClient hauk.Client) {
 	}
 }
 
+func (t *Mapper) getCurrentSIDForTopic(topic string) (string, error) {
+	session, sessionExists := t.topicSessionMap[topic]
+	if !sessionExists {
+		log.Printf("New topic %s, creating session\n", topic)
+		return t.createNewSIDForTopic(topic)
+	}
+	return session.SID, nil
+}
+
+func (t *Mapper) createNewSIDForTopic(topic string) (string, error) {
+
+	// Stop current session
+	if currentSession, sessionExists := t.topicSessionMap[topic]; sessionExists {
+		log.Printf("Stopping current session for %s: %v", topic, currentSession)
+		err := t.haukClient.StopSession(currentSession.SID)
+		if err != nil {
+			log.Printf("Error while stopping current session %+v: %v", currentSession, err)
+		}
+	}
+
+	// Create new Session
+	newSession, err := t.haukClient.CreateSession()
+	if err != nil {
+		return "n/a", err
+	}
+	t.topicSessionMap[topic] = newSession
+
+	// send email notification
+	t.sendEmailNotification(topic, newSession.URL)
+
+	// Print QR code on terminal
+	log.Printf("New session for %s: %v", topic, newSession)
+	qrterminal.GenerateHalfBlock(newSession.URL, qrterminal.L, os.Stdout)
+
+	return newSession.SID, nil
+}
+
 func createLocationParamsFromMessage(msg mqtt.Message) (url.Values, error) {
 	body := msg.Body
 	haukValues := url.Values{}
@@ -93,46 +133,8 @@ func createLocationParamsFromMessage(msg mqtt.Message) (url.Values, error) {
 
 }
 
-func getCurrentSIDForTopic(topic string, haukClient hauk.Client) (string, error) {
-	session, sessionExists := topicSessionMap[topic]
-	if !sessionExists {
-		log.Printf("New topic %s, creating session\n", topic)
-		return createNewSIDForTopic(topic, haukClient)
-	}
-	return session.SID, nil
-}
-
-func createNewSIDForTopic(topic string, haukClient hauk.Client) (string, error) {
-
-	// Stop current session
-	if currentSession, sessionExists := topicSessionMap[topic]; sessionExists {
-		log.Printf("Stopping current session for %s: %v", topic, currentSession)
-		err := haukClient.StopSession(currentSession.SID)
-		if err != nil {
-			log.Printf("Error while stopping current session %+v: %v", currentSession, err)
-		}
-	}
-
-	// Create new Session
-	newSession, err := haukClient.CreateSession()
-	if err != nil {
-		return "n/a", err
-	}
-	topicSessionMap[topic] = newSession
-	NewSessionsChannel <- TopicSession{Topic: topic, URL: newSession.URL}
-
-	// send email notification
-	sendEmailNotification(topic, newSession.URL)
-
-	// Print QR code on terminal
-	log.Printf("New session for %s: %v", topic, newSession)
-	qrterminal.GenerateHalfBlock(newSession.URL, qrterminal.L, os.Stdout)
-
-	return newSession.SID, nil
-}
-
 func setHaukValue(haukValues *url.Values, key string, value interface{}) {
-	valueMapping, hasMapping := keyMap[key]
+	valueMapping, hasMapping := mqttToHaukKeyMap[key]
 	if hasMapping {
 		var convertedValue string
 		if valueMapping.mappingFunction != nil {
@@ -144,10 +146,10 @@ func setHaukValue(haukValues *url.Values, key string, value interface{}) {
 	}
 }
 
-func sendEmailNotification(topic string, URL string) {
-	if viper.GetBool("notification.enabled") {
-		host := fmt.Sprintf("%s:%d", viper.GetString("notification.smtp_host"), viper.GetInt("notification.smtp_port"))
-		err := smtp.SendMail(host, nil, viper.GetString("notification.from"), []string{viper.GetString("notification.to")}, []byte(fmt.Sprintf("Subject: Forwarding %s to Hauk\r\n\r\nNew session: %s", topic, URL)))
+func (t *Mapper) sendEmailNotification(topic string, URL string) {
+	if t.notificationConfig.Enabled {
+		host := fmt.Sprintf("%s:%d", t.notificationConfig.Host, t.notificationConfig.Port)
+		err := smtp.SendMail(host, nil, t.notificationConfig.From, []string{t.notificationConfig.To}, []byte(fmt.Sprintf("Subject: Forwarding %s to Hauk\r\n\r\nNew session: %s", topic, URL)))
 		if err != nil {
 			log.Printf("Could not send email notification: %v", err)
 		}

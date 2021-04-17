@@ -45,13 +45,6 @@ func TestMain(m *testing.M) {
 	// Disable email notification
 	viper.SetDefault("notification.enabled", false)
 
-	// Consume NewSessionsChannel
-	go func() {
-		for {
-			<-NewSessionsChannel
-		}
-	}()
-
 	os.Exit(m.Run())
 }
 
@@ -111,7 +104,8 @@ func TestRun_LocationPushedAutomatically_KeepSession(t *testing.T) {
 	haukClient := MockHaukClient{stopSessionSID: "n/a"}
 
 	// when
-	Run(mqttLocations, &haukClient)
+	mapper := New(NotificationConfig{}, &haukClient)
+	mapper.Run(mqttLocations, &haukClient)
 
 	// then
 	expect(t, haukClient, MockHaukClient{
@@ -143,7 +137,8 @@ func TestRun_LocationPushedManually_StopOldSessionAndStartNewSession(t *testing.
 	haukClient := MockHaukClient{}
 
 	// when
-	Run(mqttLocations, &haukClient)
+	mapper := New(NotificationConfig{}, &haukClient)
+	mapper.Run(mqttLocations, &haukClient)
 
 	// then
 	expect(t, haukClient, MockHaukClient{
