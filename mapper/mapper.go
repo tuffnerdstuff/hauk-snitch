@@ -29,11 +29,14 @@ var keyMap = map[string]valueMapping{
 	"tst": {"time", func(value interface{}) string { return fmt.Sprintf("%d", int64(value.(float64))) }},
 }
 
-var topicSessionMap = make(map[string]hauk.Session)
+var topicSessionMap map[string]hauk.Session
 var NewSessionsChannel = make(chan TopicSession)
 
 // Run maps mqtt messages to hauk API calls
-func Run(messages <-chan mqtt.Message, haukClient *hauk.Client) {
+func Run(messages <-chan mqtt.Message, haukClient hauk.Client) {
+
+	topicSessionMap = make(map[string]hauk.Session)
+
 	for message := range messages {
 		//fmt.Printf("Topic: %v\nBody: %v", message.Topic, message.Body)
 		locationParams, err := createLocationParamsFromMessage(message)
@@ -42,7 +45,12 @@ func Run(messages <-chan mqtt.Message, haukClient *hauk.Client) {
 			continue
 		}
 
-		sid, err := getCurrentSIDForTopic(message.Topic, haukClient)
+		var sid string
+		if message.Body["t"] == "u" {
+			sid, err = createNewSIDForTopic(message.Topic, haukClient)
+		} else {
+			sid, err = getCurrentSIDForTopic(message.Topic, haukClient)
+		}
 		if err != nil {
 			log.Printf("%v\n", err.Error())
 			continue
@@ -85,7 +93,7 @@ func createLocationParamsFromMessage(msg mqtt.Message) (url.Values, error) {
 
 }
 
-func getCurrentSIDForTopic(topic string, haukClient *hauk.Client) (string, error) {
+func getCurrentSIDForTopic(topic string, haukClient hauk.Client) (string, error) {
 	session, sessionExists := topicSessionMap[topic]
 	if !sessionExists {
 		log.Printf("New topic %s, creating session\n", topic)
@@ -94,7 +102,18 @@ func getCurrentSIDForTopic(topic string, haukClient *hauk.Client) (string, error
 	return session.SID, nil
 }
 
-func createNewSIDForTopic(topic string, haukClient *hauk.Client) (string, error) {
+func createNewSIDForTopic(topic string, haukClient hauk.Client) (string, error) {
+
+	// Stop current session
+	if currentSession, sessionExists := topicSessionMap[topic]; sessionExists {
+		log.Printf("Stopping current session for %s: %v", topic, currentSession)
+		err := haukClient.StopSession(currentSession.SID)
+		if err != nil {
+			log.Printf("Error while stopping current session %+v: %v", currentSession, err)
+		}
+	}
+
+	// Create new Session
 	newSession, err := haukClient.CreateSession()
 	if err != nil {
 		return "n/a", err
@@ -126,9 +145,11 @@ func setHaukValue(haukValues *url.Values, key string, value interface{}) {
 }
 
 func sendEmailNotification(topic string, URL string) {
-	host := fmt.Sprintf("%s:%d", viper.GetString("mapper.smtp_host"), viper.GetInt("mapper.smtp_port"))
-	err := smtp.SendMail(host, nil, viper.GetString("mapper.from"), []string{viper.GetString("mapper.to")}, []byte(fmt.Sprintf("Subject: Forwarding %s to Hauk\r\n\r\nNew session: %s", topic, URL)))
-	if err != nil {
-		log.Printf("Could not send email notification: %v", err)
+	if viper.GetBool("notification.enabled") {
+		host := fmt.Sprintf("%s:%d", viper.GetString("notification.smtp_host"), viper.GetInt("notification.smtp_port"))
+		err := smtp.SendMail(host, nil, viper.GetString("notification.from"), []string{viper.GetString("notification.to")}, []byte(fmt.Sprintf("Subject: Forwarding %s to Hauk\r\n\r\nNew session: %s", topic, URL)))
+		if err != nil {
+			log.Printf("Could not send email notification: %v", err)
+		}
 	}
 }

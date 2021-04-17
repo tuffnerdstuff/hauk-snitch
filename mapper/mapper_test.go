@@ -3,11 +3,57 @@ package mapper
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"reflect"
 	"testing"
 
+	"github.com/spf13/viper"
+	"github.com/tuffnerdstuff/hauk-snitch/hauk"
 	"github.com/tuffnerdstuff/hauk-snitch/mqtt"
 )
+
+type MockHaukClient struct {
+	createSessionCalls int
+	stopSessionCalls   int
+	stopSessionSID     string
+	postLocationCalls  int
+	//postLocationSID    *string
+	//postLocationParams *url.Values
+}
+
+func (t *MockHaukClient) CreateSession() (hauk.Session, error) {
+	newSession := hauk.Session{ID: fmt.Sprintf("ID%d", t.createSessionCalls), SID: fmt.Sprintf("SID%d", t.createSessionCalls), URL: fmt.Sprintf("URL%d", t.createSessionCalls)}
+	t.createSessionCalls++
+	return newSession, nil
+}
+
+func (t *MockHaukClient) PostLocation(sid string, params url.Values) error {
+	t.postLocationCalls++
+	//t.postLocationSID = &sid
+	//t.postLocationParams = &params
+	return nil
+}
+
+func (t *MockHaukClient) StopSession(sid string) error {
+	t.stopSessionSID = sid
+	t.stopSessionCalls++
+	return nil
+}
+
+func TestMain(m *testing.M) {
+
+	// Disable email notification
+	viper.SetDefault("notification.enabled", false)
+
+	// Consume NewSessionsChannel
+	go func() {
+		for {
+			<-NewSessionsChannel
+		}
+	}()
+
+	os.Exit(m.Run())
+}
 
 func TestMapMessageToLocation_InputOK_OutputOK(t *testing.T) {
 	// given: mqtt message
@@ -45,6 +91,74 @@ func TestMapMessageToLocation_TypeNotLocation_Error(t *testing.T) {
 		t.Fatalf("Expected error informing user that _type != location")
 	}
 
+}
+
+func TestRun_LocationPushedAutomatically_KeepSession(t *testing.T) {
+
+	// given: mqtt Location channel
+	mqttLocations := make(chan mqtt.Message, 2)
+
+	// given: First location update
+	location := createValidLocationBody()
+	mqttLocations <- mqtt.Message{Topic: "whatevs", Body: location}
+
+	// given: Second (manual push) location update
+	mqttLocations <- mqtt.Message{Topic: "whatevs", Body: location}
+
+	close(mqttLocations)
+
+	// given: Mock hauk client
+	haukClient := MockHaukClient{stopSessionSID: "n/a"}
+
+	// when
+	Run(mqttLocations, &haukClient)
+
+	// then
+	expect(t, haukClient, MockHaukClient{
+		createSessionCalls: 1,
+		postLocationCalls:  2,
+		stopSessionCalls:   0,
+		stopSessionSID:     "n/a",
+	})
+
+}
+
+func TestRun_LocationPushedManually_StopOldSessionAndStartNewSession(t *testing.T) {
+
+	// given: mqtt Location channel
+	mqttLocations := make(chan mqtt.Message, 2)
+
+	// given: First location update
+	location := createValidLocationBody()
+	mqttLocations <- mqtt.Message{Topic: "whatevs", Body: location}
+
+	// given: Second (manual push) location update
+	location = createValidLocationBody()
+	location["t"] = "u" // manual location push
+	mqttLocations <- mqtt.Message{Topic: "whatevs", Body: location}
+
+	close(mqttLocations)
+
+	// given: Mock hauk client
+	haukClient := MockHaukClient{}
+
+	// when
+	Run(mqttLocations, &haukClient)
+
+	// then
+	expect(t, haukClient, MockHaukClient{
+		createSessionCalls: 2,
+		postLocationCalls:  2,
+		stopSessionCalls:   1,
+		stopSessionSID:     "SID0",
+	})
+
+}
+
+func expect(t *testing.T, actual interface{}, expected interface{}) {
+	if actual != expected {
+		t.Fatalf("actual value and expected value do not match:\nactual:%+v\nexpected:%+v", actual, expected)
+	}
 }
 
 func createValidLocationBody() map[string]interface{} {

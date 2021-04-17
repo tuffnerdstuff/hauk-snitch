@@ -10,19 +10,25 @@ import (
 )
 
 // Client is a hauk client
-type Client struct {
+type client struct {
 	config     Config
 	httpClient http.Client
 }
 
+type Client interface {
+	CreateSession() (Session, error)
+	StopSession(sid string) error
+	PostLocation(sid string, params url.Values) error
+}
+
 // New creates a new instance on a hauk client
-func New(config Config) *Client {
+func New(config Config) Client {
 	httpClient := http.Client{}
-	return &Client{config: config, httpClient: httpClient}
+	return &client{config: config, httpClient: httpClient}
 }
 
 // CreateSession attempts to create a new hauk session for a given device
-func (t *Client) CreateSession() (Session, error) {
+func (t *client) CreateSession() (Session, error) {
 	var session Session
 	params := url.Values{
 		"dur": {strconv.Itoa(t.config.Duration)},
@@ -31,7 +37,7 @@ func (t *Client) CreateSession() (Session, error) {
 	}
 	response, err := t.httpClient.PostForm(t.formatURL(EndpointCreate), params)
 
-	err = getPostError(response, err, "session")
+	err = getPostError(response, err, "posting session")
 	if err != nil {
 		return session, err
 	}
@@ -50,16 +56,33 @@ func (t *Client) CreateSession() (Session, error) {
 
 }
 
+func (t *client) StopSession(sid string) error {
+
+	// Set SID
+	params := url.Values{}
+	params.Add("sid", sid)
+
+	// Send
+	response, err := t.httpClient.PostForm(t.formatURL(EndpointStop), params)
+	err = getPostError(response, err, "stopping session")
+	if err != nil {
+		return err
+	}
+
+	return err
+
+}
+
 // PostLocation sends a new location for the given device.
 // If no previous session can be found, a new one will be created
-func (t *Client) PostLocation(sid string, params url.Values) error {
+func (t *client) PostLocation(sid string, params url.Values) error {
 
 	// Add sid
 	params.Add("sid", sid)
 
 	// Send
 	response, err := t.httpClient.PostForm(t.formatURL(EndpointPost), params)
-	err = getPostError(response, err, "location")
+	err = getPostError(response, err, "posting location")
 	if err != nil {
 		return err
 	}
@@ -77,7 +100,7 @@ func (t *Client) PostLocation(sid string, params url.Values) error {
 
 }
 
-func (t *Client) formatURL(endpoint string) string {
+func (t *client) formatURL(endpoint string) string {
 	var protocol string
 	if t.config.IsTLS {
 		protocol = "https"
@@ -95,11 +118,11 @@ func getBodyString(response *http.Response) (string, error) {
 	return string(body), err
 }
 
-func getPostError(response *http.Response, err error, entity string) error {
+func getPostError(response *http.Response, err error, action string) error {
 	if err != nil {
-		return fmt.Errorf("Error while posting %s: %w", entity, err)
+		return fmt.Errorf("Error while %s: %w", action, err)
 	} else if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("Server did not accept %s ( StatusCode = %d", entity, response.StatusCode)
+		return fmt.Errorf("Server did not accept %s ( StatusCode = %d", action, response.StatusCode)
 	}
 	return nil
 }

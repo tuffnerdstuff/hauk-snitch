@@ -13,7 +13,7 @@ import (
 )
 
 var mqttClient *mqtt.Client
-var haukClient *hauk.Client
+var haukClient hauk.Client
 
 func main() {
 	handleInterrupt()
