@@ -1,0 +1,22 @@
+[mqtt]
+host = "mqtt.example.com"
+port = 1883
+topic = "owntracks/+/+"
+user = "mqttuser"
+password = "mqttpassword"
+tls = true
+anonymous = false
+
+[hauk]
+host = "hauk.example.com"
+port = 443
+tls = true
+duration = 3600 # 1 hour
+interval = 1    # 1 second
+
+[notification]
+enabled=true
+smtp_host="mail"
+smtp_port=25
+from="noreply@example.com"
+to="dude@example.com"

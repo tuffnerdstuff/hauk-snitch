@@ -62,7 +62,7 @@ func (t *Client) connectClient() {
 
 func (t *Client) subscribeClient() {
 	// FIXME: topic+qos configurable
-	if token := t.pahoClient.Subscribe("owntracks/+/+", byte(0), nil); token.Wait() && token.Error() != nil {
+	if token := t.pahoClient.Subscribe(t.config.Topic, byte(0), nil); token.Wait() && token.Error() != nil {
 		panic(fmt.Errorf("Error while subscribing to topic: %w", token.Error()))
 	}
 }

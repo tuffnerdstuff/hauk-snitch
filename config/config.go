@@ -11,6 +11,10 @@ import (
 
 // LoadConfig loads config.toml
 func LoadConfig() {
+	viper.SetEnvPrefix("HAUKSNITCH")
+	viper.SetDefault("config_path", "/etc/hauk-snitch/")
+	viper.SetDefault("config_type", "toml")
+	viper.AutomaticEnv()
 	setMqttDefaults()
 	setHaukDefaults()
 	setNotificationDefaults()
@@ -22,6 +26,7 @@ func GetMqttConfig() mqtt.Config {
 	var mqttConfig mqtt.Config
 	mqttConfig.Host = viper.GetString("mqtt.host")
 	mqttConfig.Port = viper.GetInt("mqtt.port")
+	mqttConfig.Topic = viper.GetString("mqtt.topic")
 	mqttConfig.User = viper.GetString("mqtt.user")
 	mqttConfig.Password = viper.GetString("mqtt.password")
 	mqttConfig.IsAnonymous = viper.GetBool("mqtt.anonymous")
@@ -56,8 +61,9 @@ func GetNotificationConfig() mapper.NotificationConfig {
 
 func readConfigFromFile() {
 	viper.SetConfigName("config")
-	viper.SetConfigType("toml")
+	viper.SetConfigType(viper.GetString("config_type"))
 	viper.AddConfigPath(".")
+	viper.AddConfigPath(viper.GetString("config_path"))
 
 	err := viper.ReadInConfig()
 	if err != nil {
@@ -68,6 +74,7 @@ func readConfigFromFile() {
 func setMqttDefaults() {
 	viper.SetDefault("mqtt.host", "localhost")
 	viper.SetDefault("mqtt.port", 1883)
+	viper.SetDefault("mqtt.topic", "owntracks/+/+")
 	viper.SetDefault("mqtt.user", "")
 	viper.SetDefault("mqtt.password", "")
 	viper.SetDefault("mqtt.anonymous", true)

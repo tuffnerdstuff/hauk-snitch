@@ -17,6 +17,5 @@ FROM gcr.io/distroless/base
 
 # Copy our static executable.
 COPY --from=builder /go/bin/hauk-snitch /go/bin/hauk-snitch
-COPY --from=builder /go/src/hauk-snitch/config.toml /go/src/hauk-snitch/config.toml
 WORKDIR /go/src/hauk-snitch
 CMD ["/go/bin/hauk-snitch"]

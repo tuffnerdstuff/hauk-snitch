@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+    hauk-snitch:
+        build: .
+        volumes:
+            - ./config.toml:/etc/hauk-snitch/config.toml
+    mail:
+        image: bytemark/smtp

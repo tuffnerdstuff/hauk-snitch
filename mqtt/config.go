@@ -4,6 +4,7 @@ package mqtt
 type Config struct {
 	Host        string
 	Port        int
+	Topic       string
 	User        string
 	Password    string
 	IsTLS       bool
