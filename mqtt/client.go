@@ -30,7 +30,7 @@ func (t *Client) Connect() {
 	t.subscribeClient()
 }
 
-// Disconnect closes the Messages channel and diconnects the mqtt client
+// Disconnect closes the Messages channel and disconnects the mqtt client
 func (t *Client) Disconnect() {
 	t.pahoClient.Disconnect(250)
 	close(t.Messages)

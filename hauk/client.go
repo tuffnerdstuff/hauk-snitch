@@ -9,12 +9,12 @@ import (
 	"strings"
 )
 
-// Client is a hauk client
 type client struct {
 	config     Config
 	httpClient http.Client
 }
 
+// Client is a client to the Hauk REST API
 type Client interface {
 	CreateSession() (Session, error)
 	StopSession(sid string) error
