@@ -14,6 +14,8 @@ The simplest way to build and run hauk-snitch is by using docker-compose:
 3. You're done!
 
 ## Configuration
+All necessary configuration is done in the file `config.toml`. You can use the template file `template-config.toml` as a base and adapt it to your needs. If you want to put `config.toml` somewhere else, you just have to
+adjust the volume mount in `docker-compose.yaml`.
 
 ### MQTT broker
 The MQTT broker the OwnTracks clients post their locations to. If `anonymous` is set to `true`, `username` and `password` are omitted. If your MQTT broker is TLS secured, you have to set `tls` to `true` and given you are using a certificate which is not self signed (e.g. letsencrypt), that should be all you need.
