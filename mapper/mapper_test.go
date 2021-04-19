@@ -60,8 +60,8 @@ func TestMapMessageToLocation_InputOK_OutputOK(t *testing.T) {
 		"lon":  {fmt.Sprintf("%v", body["lon"])},
 		"acc":  {fmt.Sprintf("%v", body["acc"])},
 		"alt":  {fmt.Sprintf("%v", body["alt"])},
-		"spd":  {fmt.Sprintf("%v", body["vel"])},
-		"time": {fmt.Sprintf("%v", int64(body["tst"].(float64)))},
+		"spd":  {fmt.Sprintf("%f", float64(body["vel"].(int))/3.6)},
+		"time": {fmt.Sprintf("%d", int64(body["tst"].(float64)))},
 	}
 	if !reflect.DeepEqual(givenLocation, expectedLocation) {
 		t.Fatalf("Locations do not match!\nGiven:%v\nExpected:%v", givenLocation, expectedLocation)

@@ -29,8 +29,16 @@ var mqttToHaukKeyMap = map[string]valueMapping{
 	mqtt.ParamAltitude:  {hauk.ParamAltitude, nil},
 	mqtt.ParamLatitude:  {hauk.ParamLatitude, nil},
 	mqtt.ParamLongitude: {hauk.ParamLongitude, nil},
-	mqtt.ParamVelocity:  {hauk.ParamVelocity, nil},
-	mqtt.ParamTime:      {hauk.ParamTime, func(value interface{}) string { return fmt.Sprintf("%d", int64(value.(float64))) }},
+	mqtt.ParamVelocity: {hauk.ParamVelocity, func(value interface{}) string {
+		// km/h -> m/s
+		return fmt.Sprintf("%f", float64(value.(int))/3.6)
+	}},
+	mqtt.ParamTime: {hauk.ParamTime, func(value interface{}) string {
+		// UNIX epoch float -> int
+		// Hauk Android client also sends float, but formatted differently.
+		// Before converting to int the frontend sometimes did not update.
+		return fmt.Sprintf("%d", int64(value.(float64)))
+	}},
 }
 
 // New creates a new instance of the mapper orchestrating mqtt and Hauk
