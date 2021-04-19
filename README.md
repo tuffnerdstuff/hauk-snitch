@@ -29,7 +29,7 @@ anonymous = false
 ```
 
 ### Hauk
-The Hauk client you want your location forwarded to.
+The Hauk client you want your location forwarded to. Each Hauk session will expire after `duration` seconds and the Hauk frontend will refresh locations every `interval` seconds.
 ```
 [hauk]
 host = "hauk.example.com"
@@ -39,7 +39,9 @@ duration = 3600 # 1 hour
 interval = 1    # 1 second
 ```
 ### Notification
-Each time a new Hauk session is created, you will be notified via eMail.
+Each time a new Hauk session is created, you will be notified via eMail if `enabled` is set to `true`. If you use the provided `docker-compose.yaml` a SMTP server will be started 
+along hauk-snitch and you can leave `smtp_host` and `smtp_port` as it is, otherwise you have to adapt it to your needs. The eMail notifications will have the sender address `from` 
+and will be sent to the email address `to`.
 ```
 [notification]
 enabled=true
