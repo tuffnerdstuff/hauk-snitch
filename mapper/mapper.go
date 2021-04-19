@@ -31,13 +31,13 @@ var mqttToHaukKeyMap = map[string]valueMapping{
 	mqtt.ParamLongitude: {hauk.ParamLongitude, nil},
 	mqtt.ParamVelocity: {hauk.ParamVelocity, func(value interface{}) string {
 		// km/h -> m/s
-		return fmt.Sprintf("%f", float64(value.(int))/3.6)
+		return fmt.Sprintf("%f", convertToFloat(value)/3.6)
 	}},
 	mqtt.ParamTime: {hauk.ParamTime, func(value interface{}) string {
 		// UNIX epoch float -> int
 		// Hauk Android client also sends float, but formatted differently.
 		// Before converting to int the frontend sometimes did not update.
-		return fmt.Sprintf("%d", int64(value.(float64)))
+		return fmt.Sprintf("%d", int64(convertToFloat(value)))
 	}},
 }
 
@@ -152,6 +152,21 @@ func setHaukValue(haukValues *url.Values, key string, value interface{}) {
 		}
 		haukValues.Add(valueMapping.haukKey, convertedValue)
 	}
+}
+
+func convertToFloat(value interface{}) float64 {
+	var floatValue float64 = 0
+	switch value.(type) {
+	case float64:
+		floatValue = value.(float64)
+	case int:
+		floatValue = float64(value.(int))
+	case int32:
+		floatValue = float64(value.(int32))
+	case int64:
+		floatValue = float64(value.(int64))
+	}
+	return floatValue
 }
 
 func (t *Mapper) sendEmailNotification(topic string, URL string) {
