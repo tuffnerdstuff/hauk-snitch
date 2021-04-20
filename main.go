@@ -9,19 +9,22 @@ import (
 	"github.com/tuffnerdstuff/hauk-snitch/hauk"
 	m "github.com/tuffnerdstuff/hauk-snitch/mapper"
 	"github.com/tuffnerdstuff/hauk-snitch/mqtt"
+	"github.com/tuffnerdstuff/hauk-snitch/notification"
 )
 
 var mqttClient *mqtt.Client
 var haukClient hauk.Client
+var notifier notification.Notifier
 var mapper m.Mapper
 
 func main() {
 	handleInterrupt()
 	config.LoadConfig()
 
-	runHaukClient()
-	runMqttClient()
-	runMapper()
+	initHaukClient()
+	initMqttClient()
+	initNotifier()
+	initMapper()
 
 }
 
@@ -37,19 +40,20 @@ func handleInterrupt() {
 	}()
 }
 
-func runMqttClient() {
-	mqttConfig := config.GetMqttConfig()
-	mqttClient = mqtt.New(mqttConfig)
+func initMqttClient() {
+	mqttClient = mqtt.New(config.GetMqttConfig())
 	mqttClient.Connect()
 }
 
-func runHaukClient() {
-	haukConfig := config.GetHaukConfig()
-	haukClient = hauk.New(haukConfig)
+func initHaukClient() {
+	haukClient = hauk.New(config.GetHaukConfig())
 }
 
-func runMapper() {
-	notificationConfig := config.GetNotificationConfig()
-	mapper = m.New(notificationConfig, haukClient)
-	mapper.Run(mqttClient.Messages, haukClient)
+func initNotifier() {
+	notifier = notification.New(config.GetNotificationConfig())
+}
+
+func initMapper() {
+	mapper = m.New(config.GetMapperConfig(), haukClient, notifier)
+	mapper.Run(mqttClient.Messages)
 }

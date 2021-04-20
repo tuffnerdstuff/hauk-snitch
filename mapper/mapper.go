@@ -3,20 +3,21 @@ package mapper
 import (
 	"fmt"
 	"log"
-	"net/smtp"
 	"net/url"
 	"os"
 
 	"github.com/mdp/qrterminal"
 	"github.com/tuffnerdstuff/hauk-snitch/hauk"
 	"github.com/tuffnerdstuff/hauk-snitch/mqtt"
+	"github.com/tuffnerdstuff/hauk-snitch/notification"
 )
 
 // Mapper orchestrates incoming locations via mqtt and outgoing calls to Hauk
 type Mapper struct {
-	topicSessionMap    map[string]hauk.Session
-	haukClient         hauk.Client
-	notificationConfig NotificationConfig
+	topicSessionMap map[string]hauk.Session
+	haukClient      hauk.Client
+	notifier        notification.Notifier
+	config          Config
 }
 
 type valueMapping struct {
@@ -42,12 +43,12 @@ var mqttToHaukKeyMap = map[string]valueMapping{
 }
 
 // New creates a new instance of the mapper orchestrating mqtt and Hauk
-func New(notificationConfig NotificationConfig, haukClient hauk.Client) Mapper {
-	return Mapper{topicSessionMap: make(map[string]hauk.Session), haukClient: haukClient, notificationConfig: notificationConfig}
+func New(config Config, haukClient hauk.Client, notifier notification.Notifier) Mapper {
+	return Mapper{topicSessionMap: make(map[string]hauk.Session), haukClient: haukClient, config: config, notifier: notifier}
 }
 
 // Run maps mqtt messages to hauk API calls
-func (t *Mapper) Run(messages <-chan mqtt.Message, haukClient hauk.Client) {
+func (t *Mapper) Run(messages <-chan mqtt.Message) {
 
 	for message := range messages {
 		locationParams, err := createLocationParamsFromMessage(message)
@@ -62,7 +63,7 @@ func (t *Mapper) Run(messages <-chan mqtt.Message, haukClient hauk.Client) {
 			continue
 		}
 
-		err = haukClient.PostLocation(sid, locationParams)
+		err = t.haukClient.PostLocation(sid, locationParams)
 		err = t.handleExpiredSession(err, message, locationParams)
 		if err != nil {
 			log.Printf("Could not handle expired session, skipping location: %s", err.Error())
@@ -105,7 +106,7 @@ func (t *Mapper) createNewSIDForTopic(topic string) (string, error) {
 	t.topicSessionMap[topic] = newSession
 
 	// send email notification
-	t.sendEmailNotification(topic, newSession.URL)
+	t.notifier.NotifyNewSession(topic, newSession.URL)
 
 	// Print QR code on terminal
 	log.Printf("New session for %s: %v", topic, newSession)
@@ -175,14 +176,4 @@ func convertToFloat(value interface{}) float64 {
 		floatValue = float64(value.(int64))
 	}
 	return floatValue
-}
-
-func (t *Mapper) sendEmailNotification(topic string, URL string) {
-	if t.notificationConfig.Enabled {
-		host := fmt.Sprintf("%s:%d", t.notificationConfig.Host, t.notificationConfig.Port)
-		err := smtp.SendMail(host, nil, t.notificationConfig.From, []string{t.notificationConfig.To}, []byte(fmt.Sprintf("Subject: Forwarding %s to Hauk\r\n\r\nNew session: %s", topic, URL)))
-		if err != nil {
-			log.Printf("Could not send email notification: %v", err)
-		}
-	}
 }

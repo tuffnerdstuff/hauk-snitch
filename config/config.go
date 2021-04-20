@@ -7,6 +7,7 @@ import (
 	"github.com/tuffnerdstuff/hauk-snitch/hauk"
 	"github.com/tuffnerdstuff/hauk-snitch/mapper"
 	"github.com/tuffnerdstuff/hauk-snitch/mqtt"
+	"github.com/tuffnerdstuff/hauk-snitch/notification"
 )
 
 // LoadConfig loads config.toml
@@ -48,9 +49,17 @@ func GetHaukConfig() hauk.Config {
 	return haukConfig
 }
 
+func GetMapperConfig() mapper.Config {
+	var mapperConfig mapper.Config
+	mapperConfig.SessionStartAuto = viper.GetBool(("mapper.start_session_auto"))
+	mapperConfig.SessionStartManual = viper.GetBool(("mapper.start_session_manual"))
+	mapperConfig.SessionStopAuto = viper.GetBool(("mapper.stop_session_auto"))
+	return mapperConfig
+}
+
 // GetNotificationConfig returns a struct containing email notification configuration
-func GetNotificationConfig() mapper.NotificationConfig {
-	var notificationConfig mapper.NotificationConfig
+func GetNotificationConfig() notification.Config {
+	var notificationConfig notification.Config
 	notificationConfig.Enabled = viper.GetBool("notification.enabled")
 	notificationConfig.Host = viper.GetString("notification.smtp_host")
 	notificationConfig.Port = viper.GetInt("notification.smtp_port")
@@ -90,6 +99,13 @@ func setHaukDefaults() {
 	viper.SetDefault("hauk.tls", false)
 	viper.SetDefault("hauk.duration", 3600) // 1 hour
 	viper.SetDefault("hauk.interval", 1)    // Every second
+}
+
+func setMapperDefaults() {
+	viper.SetDefault("mapper.stop_session_auto", true)
+	viper.SetDefault("mapper.start_session_auto", true)
+	viper.SetDefault("mapper.start_session_manual", true)
+
 }
 
 func setNotificationDefaults() {

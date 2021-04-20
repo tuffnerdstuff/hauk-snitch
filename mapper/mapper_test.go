@@ -29,6 +29,14 @@ func (t *MockHaukClient) StopSession(sid string) error {
 	return args.Error(0)
 }
 
+type MockNotifier struct {
+	mock.Mock
+}
+
+func (t *MockNotifier) NotifyNewSession(topic string, URL string) {
+	t.Called(topic, URL)
+}
+
 func TestMapMessageToLocation_TypeNotLocation_Error(t *testing.T) {
 	// given: type is not location
 	body := make(map[string]interface{})
@@ -53,7 +61,7 @@ func TestRun_LocationPushedAutomatically_KeepSession(t *testing.T) {
 
 	// given: Mock hauk client
 	haukClient := new(MockHaukClient)
-	haukClient.On("CreateSession").Return(hauk.Session{SID: "newSessionSID"}, nil)
+	haukClient.On("CreateSession").Return(hauk.Session{SID: "newSessionSID", URL: "url/to/newSessionSID"}, nil)
 	haukClient.On("PostLocation", "newSessionSID", getExpectedLocationValues(location)).Return(nil)
 
 	// given: mqtt Location channel
@@ -67,15 +75,22 @@ func TestRun_LocationPushedAutomatically_KeepSession(t *testing.T) {
 
 	close(mqttLocations)
 
-	// when
-	mapper := New(NotificationConfig{}, haukClient)
-	mapper.Run(mqttLocations, haukClient)
+	// given: notifier
+	notifier := new(MockNotifier)
+	notifier.On("NotifyNewSession", "whatevs", "url/to/newSessionSID").Once()
 
-	// then
+	// when
+	mapper := New(Config{}, haukClient, notifier)
+	mapper.Run(mqttLocations)
+
+	// then: Assert haukClient Calls
 	haukClient.AssertExpectations(t)
 	haukClient.AssertNumberOfCalls(t, "CreateSession", 1)
 	haukClient.AssertNumberOfCalls(t, "PostLocation", 2)
 	haukClient.AssertNotCalled(t, "StopSession", "newSessionID")
+
+	// then: Assert notifier Calls
+	notifier.AssertExpectations(t)
 
 }
 
@@ -89,9 +104,9 @@ func TestRun_LocationPushedAutomaticallyButSessionExpired_StartNewSession(t *tes
 
 	// given: Mock hauk client
 	haukClient := new(MockHaukClient)
-	haukClient.On("CreateSession").Return(hauk.Session{SID: "firstSession"}, nil).Once()
+	haukClient.On("CreateSession").Return(hauk.Session{SID: "firstSession", URL: "firstURL"}, nil).Once()
 	haukClient.On("PostLocation", "firstSession", getExpectedLocationValues(location1)).Return(&hauk.SessionExpiredError{}).Once()
-	haukClient.On("CreateSession").Return(hauk.Session{SID: "secondSession"}, nil).Once()
+	haukClient.On("CreateSession").Return(hauk.Session{SID: "secondSession", URL: "secondURL"}, nil).Once()
 	haukClient.On("PostLocation", "secondSession", getExpectedLocationValues(location1)).Return(nil).Once()
 	haukClient.On("PostLocation", "secondSession", getExpectedLocationValues(location2)).Return(nil).Once()
 
@@ -106,13 +121,18 @@ func TestRun_LocationPushedAutomaticallyButSessionExpired_StartNewSession(t *tes
 
 	close(mqttLocations)
 
-	// when
-	mapper := New(NotificationConfig{}, haukClient)
-	mapper.Run(mqttLocations, haukClient)
+	// given: notifier
+	notifier := new(MockNotifier)
+	notifier.On("NotifyNewSession", "whatevs", "firstURL").Once()
+	notifier.On("NotifyNewSession", "whatevs", "secondURL").Once()
 
-	// then
+	// when
+	mapper := New(Config{}, haukClient, notifier)
+	mapper.Run(mqttLocations)
+
+	// then: assert mock calls
 	haukClient.AssertExpectations(t)
-	haukClient.AssertNumberOfCalls(t, "StopSession", 0)
+	notifier.AssertExpectations(t)
 
 }
 
@@ -127,10 +147,10 @@ func TestRun_LocationPushedManually_StopOldSessionAndStartNewSession(t *testing.
 
 	// given: Mock hauk client
 	haukClient := new(MockHaukClient)
-	haukClient.On("CreateSession").Return(hauk.Session{SID: "firstSession"}, nil).Once()
+	haukClient.On("CreateSession").Return(hauk.Session{SID: "firstSession", URL: "firstURL"}, nil).Once()
 	haukClient.On("PostLocation", "firstSession", getExpectedLocationValues(locationAuto)).Return(nil).Once()
 	haukClient.On("StopSession", "firstSession").Return(nil).Once()
-	haukClient.On("CreateSession").Return(hauk.Session{SID: "secondSession"}, nil).Once()
+	haukClient.On("CreateSession").Return(hauk.Session{SID: "secondSession", URL: "secondURL"}, nil).Once()
 	haukClient.On("PostLocation", "secondSession", getExpectedLocationValues(locationManual)).Return(nil).Once()
 
 	// given: mqtt Location channel
@@ -144,12 +164,18 @@ func TestRun_LocationPushedManually_StopOldSessionAndStartNewSession(t *testing.
 
 	close(mqttLocations)
 
-	// when
-	mapper := New(NotificationConfig{}, haukClient)
-	mapper.Run(mqttLocations, haukClient)
+	// given: notifier
+	notifier := new(MockNotifier)
+	notifier.On("NotifyNewSession", "whatevs", "firstURL").Once()
+	notifier.On("NotifyNewSession", "whatevs", "secondURL").Once()
 
-	// then
+	// when
+	mapper := New(Config{}, haukClient, notifier)
+	mapper.Run(mqttLocations)
+
+	// then: assert mock calls
 	haukClient.AssertExpectations(t)
+	notifier.AssertExpectations(t)
 
 }
 
