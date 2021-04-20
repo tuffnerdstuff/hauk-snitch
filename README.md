@@ -5,7 +5,7 @@ Simply speaking, hauk-snitch is a little telltale gopher sitting in between [Own
 ## Why hauk-snitch?
 OwnTracks and Hauk both have their specific use-cases and do an excellent job at targeting them. As a user of both applications, though, I saw some room for improvement:
 1. I only want to use one App for both Hauk and OwnTracks (Android)
-2. There is no Hauk iOS App, yet
+2. There is no Hauk iOS App, yet, but an excellent one for OwnTracks
 
 ## Installation
 The simplest way to build and run hauk-snitch is by using docker-compose:
