@@ -18,6 +18,7 @@ func LoadConfig() {
 	viper.AutomaticEnv()
 	setMqttDefaults()
 	setHaukDefaults()
+	setMapperDefaults()
 	setNotificationDefaults()
 	readConfigFromFile()
 }
