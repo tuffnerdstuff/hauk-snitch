@@ -72,7 +72,7 @@ func (t *Mapper) Run(messages <-chan mqtt.Message) {
 }
 
 func (t *Mapper) getOrCreateSID(message mqtt.Message) (string, error) {
-	if message.Body[mqtt.ParamTrigger] == mqtt.TriggerManual {
+	if t.config.SessionStartManual && message.Body[mqtt.ParamTrigger] == mqtt.TriggerManual {
 		return t.createNewSIDForTopic(message.Topic)
 	}
 	return t.getCurrentSIDForTopic(message.Topic)
@@ -81,8 +81,11 @@ func (t *Mapper) getOrCreateSID(message mqtt.Message) (string, error) {
 func (t *Mapper) getCurrentSIDForTopic(topic string) (string, error) {
 	session, sessionExists := t.topicSessionMap[topic]
 	if !sessionExists {
-		log.Printf("New topic %s, creating session\n", topic)
-		return t.createNewSIDForTopic(topic)
+		if t.config.SessionStartAuto {
+			log.Printf("New topic %s, creating session\n", topic)
+			return t.createNewSIDForTopic(topic)
+		}
+		return "", fmt.Errorf("Session for topic does not exist and autostart is disabled")
 	}
 	return session.SID, nil
 }
@@ -90,11 +93,13 @@ func (t *Mapper) getCurrentSIDForTopic(topic string) (string, error) {
 func (t *Mapper) createNewSIDForTopic(topic string) (string, error) {
 
 	// Stop current session
-	if currentSession, sessionExists := t.topicSessionMap[topic]; sessionExists {
-		log.Printf("Stopping current session for %s: %v", topic, currentSession)
-		err := t.haukClient.StopSession(currentSession.SID)
-		if err != nil {
-			log.Printf("Error while stopping current session %+v: %v", currentSession, err)
+	if t.config.SessionStopAuto {
+		if currentSession, sessionExists := t.topicSessionMap[topic]; sessionExists {
+			log.Printf("Stopping current session for %s: %v", topic, currentSession)
+			err := t.haukClient.StopSession(currentSession.SID)
+			if err != nil {
+				log.Printf("Error while stopping current session %+v: %v", currentSession, err)
+			}
 		}
 	}
 
