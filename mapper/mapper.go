@@ -85,7 +85,7 @@ func (t *Mapper) getCurrentSIDForTopic(topic string) (string, error) {
 			log.Printf("New topic %s, creating session\n", topic)
 			return t.createNewSIDForTopic(topic)
 		}
-		return "", fmt.Errorf("Session for topic does not exist and autostart is disabled")
+		return "", fmt.Errorf("Session for topic %s does not exist and autostart is disabled", topic)
 	}
 	return session.SID, nil
 }
