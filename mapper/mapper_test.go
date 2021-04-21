@@ -97,11 +97,13 @@ func TestRun_NoSession(t *testing.T) {
 func testSessionHandling(t *testing.T, startSessionAuto bool, startSessionManual bool, stopSessionAuto bool) {
 
 	// given: valid locations
-	locationAuto := createValidLocationBody()
-	locationAuto["tst"] = float64(1)
+	locationAuto1 := createValidLocationBody()
+	locationAuto1["tst"] = float64(1)
 	locationManual := createValidLocationBody()
 	locationManual["t"] = "u"
 	locationManual["tst"] = float64(2)
+	locationAuto2 := createValidLocationBody()
+	locationAuto2["tst"] = float64(3)
 
 	// given: Mock hauk client
 	haukClient := new(MockHaukClient)
@@ -109,44 +111,64 @@ func testSessionHandling(t *testing.T, startSessionAuto bool, startSessionManual
 	// given: notifier
 	notifier := new(MockNotifier)
 
-	// auto push locationAuto
+	currentSID := "n/a"
+	// auto push locationAuto1
 	if startSessionAuto {
 		// --> CreateSession "firstSession"
 		haukClient.On("CreateSession").Return(hauk.Session{SID: "firstSession", URL: "firstURL"}, nil).Once()
 		notifier.On("NotifyNewSession", "whatevs", "firstURL").Once()
 		// --> PostLocation to "firstSession"
-		haukClient.On("PostLocation", "firstSession", getExpectedLocationValues(locationAuto)).Return(&hauk.SessionExpiredError{}).Once()
+		haukClient.On("PostLocation", "firstSession", getExpectedLocationValues(locationAuto1)).Return(&hauk.SessionExpiredError{}).Once()
 		// handle expired session
 		// --> CreateSession "secondSession"
 		haukClient.On("CreateSession").Return(hauk.Session{SID: "secondSession", URL: "secondURL"}, nil).Once()
 		notifier.On("NotifyNewSession", "whatevs", "secondURL").Once()
 		// --> PostLocation to "secondSession" (re-send)
-		haukClient.On("PostLocation", "secondSession", getExpectedLocationValues(locationAuto)).Return(nil).Once()
+		haukClient.On("PostLocation", "secondSession", getExpectedLocationValues(locationAuto1)).Return(nil).Once()
+		currentSID = "secondSession"
 	}
 	// manual push locationManual
 	if startSessionManual {
 		if startSessionAuto && stopSessionAuto {
 			// --> StopSession "secondSession"
-			haukClient.On("StopSession", "secondSession").Return(nil).Once()
+			haukClient.On("StopSession", currentSID).Return(nil).Once()
 		}
 		// --> CreateSession "thirdSession"
 		haukClient.On("CreateSession").Return(hauk.Session{SID: "thirdSession", URL: "thirdURL"}, nil).Once()
 		notifier.On("NotifyNewSession", "whatevs", "thirdURL").Once()
 		// --> PostLocation to "thirdSession"
 		haukClient.On("PostLocation", "thirdSession", getExpectedLocationValues(locationManual)).Return(nil).Once()
-	} else if startSessionAuto {
+		currentSID = "thirdSession"
+	} else if currentSID != "n/a" {
 		// --> PostLocation to "secondSession"
-		haukClient.On("PostLocation", "secondSession", getExpectedLocationValues(locationManual)).Return(nil).Once()
+		haukClient.On("PostLocation", currentSID, getExpectedLocationValues(locationManual)).Return(nil).Once()
+	}
+	// auto push locationAuto2
+	// if startSessionAuto == true and/or startSessionManual == true then we have a SID, otherwise we will never be able to start sessions at all
+	if currentSID != "n/a" {
+		// --> PostLocation to "secondSession" / "thirdSession"
+		haukClient.On("PostLocation", currentSID, getExpectedLocationValues(locationAuto2)).Return(&hauk.SessionExpiredError{}).Once()
+		// handle expired session
+		if startSessionAuto {
+			// --> CreateSession "lastSession"
+			haukClient.On("CreateSession").Return(hauk.Session{SID: "lastSession", URL: "lastURL"}, nil).Once()
+			notifier.On("NotifyNewSession", "whatevs", "lastURL").Once()
+			// --> PostLocation to "secondSession" (re-send)
+			haukClient.On("PostLocation", "lastSession", getExpectedLocationValues(locationAuto2)).Return(nil).Once()
+		}
 	}
 
 	// given: mqtt Location channel
-	mqttLocations := make(chan mqtt.Message, 2)
+	mqttLocations := make(chan mqtt.Message, 3)
 
 	// given: First location update
-	mqttLocations <- mqtt.Message{Topic: "whatevs", Body: locationAuto}
+	mqttLocations <- mqtt.Message{Topic: "whatevs", Body: locationAuto1}
 
 	// given: Second location update
 	mqttLocations <- mqtt.Message{Topic: "whatevs", Body: locationManual}
+
+	// given: Third location update
+	mqttLocations <- mqtt.Message{Topic: "whatevs", Body: locationAuto2}
 
 	close(mqttLocations)
 

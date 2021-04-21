@@ -126,19 +126,24 @@ func (t *Mapper) handleExpiredSession(err error, message mqtt.Message, locationP
 		case *hauk.SessionExpiredError:
 			// Remove expired session
 			delete(t.topicSessionMap, message.Topic)
-			// Create new session
-			log.Printf("Session for %s expired, creating new one\n", message.Topic)
-			var newSID string
-			if newSID, err = t.createNewSIDForTopic(message.Topic); err != nil {
-				log.Printf("%v", err.Error())
-				return err
+			if t.config.SessionStartAuto {
+				// Create new session
+				log.Printf("Session for %s expired, creating new one\n", message.Topic)
+				var newSID string
+				if newSID, err = t.createNewSIDForTopic(message.Topic); err != nil {
+					log.Printf("%v", err.Error())
+					return err
+				}
+				// re-send location
+				log.Println("Re-posting location to new session")
+				return t.haukClient.PostLocation(newSID, locationParams)
 			}
-			// re-send location
-			log.Println("Re-posting location to new session")
-			err = t.haukClient.PostLocation(newSID, locationParams)
+			return nil
+		default:
+			return err
 		}
 	}
-	return err
+	return nil
 }
 
 func createLocationParamsFromMessage(msg mqtt.Message) (url.Values, error) {
