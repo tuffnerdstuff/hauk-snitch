@@ -1,4 +1,5 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/tuffnerdstuff/hauk-snitch)](https://goreportcard.com/report/github.com/tuffnerdstuff/hauk-snitch)
+[![Code Size](https://img.shields.io/github/languages/code-size/tuffnerdstuff/hauk-snitch)]
 # hauk-snitch
 Simply speaking, hauk-snitch is a little telltale gopher sitting in between [OwnTracks](https://github.com/owntracks) and [Hauk](https://github.com/bilde2910/Hauk), passing on information from the former to the latter. In more technical terms hauk-snitch connects to an MQTT broker, listening for location updates published by OwnTracks and posts them to a Hauk instance, managing sessions along the way. That way you get the best of both worlds: Flexible and fine-grained long-term location tracking and recording (OwnTracks) and simple, on-demand location sharing (Hauk) all with just one mobile client (OwnTracks), available for both [Android](https://play.google.com/store/apps/details?id=org.owntracks.android) and [iOS](https://apps.apple.com/us/app/mqttitude/id692424691).
 
