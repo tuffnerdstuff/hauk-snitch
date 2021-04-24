@@ -40,6 +40,17 @@ tls = true
 duration = 3600 # 1 hour
 interval = 1    # 1 second
 ```
+### Mapper
+This is the part negotiating between OwnTracks and Hauk. There are some settings which influence how the mapper manages Hauk sessions. `start_session_auto = true` causes a new Hauk session for a given topic to be started if there is none or if the current one expired. `start_session_manual = true` starts a new Hauk session for a given topic if the user pushes a location manually. If `stop_session_auto` is set to `true` the old session is stopped first, otherwise it will expire on its own. `stop_session_auto = false` can be useful if you want people to be able to look at your track after you finished your tour, without letting them know where you currently are.
+
+```
+[mapper]
+start_session_auto = true
+stop_session_auto = true
+start_session_manual = true
+```
+
+
 ### Notification
 Each time a new Hauk session is created, you will be notified via eMail if `enabled` is set to `true`. If you use the provided `docker-compose.yaml` a SMTP server will be started 
 along hauk-snitch and you can leave `smtp_host` and `smtp_port` as it is, otherwise you have to adapt it to your needs. The eMail notifications will have the sender address `from` 
