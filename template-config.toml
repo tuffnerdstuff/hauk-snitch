@@ -4,7 +4,7 @@ port = 1883
 topic = "owntracks/+/+"
 user = "mqttuser"
 password = "mqttpassword"
-tls = true
+tls = false
 anonymous = false
 
 [hauk]
