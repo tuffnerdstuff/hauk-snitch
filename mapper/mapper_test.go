@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/tuffnerdstuff/hauk-snitch/hauk"
@@ -63,6 +64,52 @@ func TestMapMessageToLocation_TypeNotLocation_Error(t *testing.T) {
 	haukClient.AssertExpectations(t)
 	notifier.AssertExpectations(t)
 
+}
+
+func TestRun_BlockingMessageProcessingOnTopicA_ShouldNotBlockMessageProcessingOnTopicB(t *testing.T) {
+
+	// given: Valid location updates for topic A and B
+	locationTopicA := createValidLocationBody()
+	locationTopicA["tst"] = float64(1)
+	locationTopicB := createValidLocationBody()
+	locationTopicB["tst"] = float64(2)
+
+	// given: Hauk client
+	haukClient := new(MockHaukClient)
+	locationABlocker := make(chan time.Time, 1)
+	haukClient.On("CreateSession").Return(hauk.Session{SID: "anySession", URL: "anyURL"}, nil)
+
+	// given: notifier
+	notifier := new(MockNotifier)
+
+	// given: Location A blocks ...
+	mqttMessages := make(chan mqtt.Message, 2)
+	notifier.On("NotifyNewSession", "A", "anyURL").Once()
+	haukClient.On("PostLocation", "anySession", getExpectedLocationValues(locationTopicA)).Return(nil).Run(func(args mock.Arguments) {
+		close(mqttMessages)
+	}).Once().WaitFor = locationABlocker
+	mqttMessages <- mqtt.Message{Topic: "A", Body: locationTopicA}
+
+	// given: ... until after location B has been processed in parallel
+	notifier.On("NotifyNewSession", "B", "anyURL").Once()
+	haukClient.On("PostLocation", "anySession", getExpectedLocationValues(locationTopicB)).Return(nil).Run(func(args mock.Arguments) {
+		close(locationABlocker)
+	}).Once()
+	mqttMessages <- mqtt.Message{Topic: "B", Body: locationTopicB}
+
+	// when:
+	mapper := New(Config{
+		SessionStartAuto:   true,
+		SessionStopAuto:    false,
+		SessionStartManual: false,
+	}, haukClient, notifier)
+	mapper.Run(mqttMessages)
+
+	// then: assert mock calls
+	haukClient.AssertExpectations(t)
+	notifier.AssertExpectations(t)
+
+	// close messages channel and exit
 }
 
 func TestRun_SessionAutoStartAndManualStartAndAutoStop(t *testing.T) {
@@ -178,7 +225,7 @@ func testSessionHandling(t *testing.T, startSessionAuto bool, startSessionManual
 		SessionStartManual: startSessionManual,
 		SessionStopAuto:    stopSessionAuto,
 	}, haukClient, notifier)
-	mapper.Run(mqttLocations)
+	mapper.handleTopic(mqttLocations)
 
 	// then: assert mock calls
 	haukClient.AssertExpectations(t)
