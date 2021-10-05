@@ -21,9 +21,18 @@ func New(config Config) Notifier {
 }
 
 func (t *notifier) NotifyNewSession(topic string, URL string) {
+	t.sendMail(fmt.Sprintf("Forwarding %s to Hauk", topic), fmt.Sprintf("New session: %s", URL))
+}
+
+func (t *notifier) NotifyError(err error) {
+	t.sendMail("An error occurred", fmt.Sprintf("The following error occurred: %s", err.Error()))
+}
+
+func (t *notifier) sendMail(subject string, message string) {
+
 	if t.config.Enabled {
 		host := fmt.Sprintf("%s:%d", t.config.Host, t.config.Port)
-		err := smtp.SendMail(host, nil, t.config.From, []string{t.config.To}, []byte(fmt.Sprintf("Subject: Forwarding %s to Hauk\r\n\r\nNew session: %s", topic, URL)))
+		err := smtp.SendMail(host, nil, t.config.From, []string{t.config.To}, []byte(fmt.Sprintf("Subject: [hauk-snitch] %s\r\n\r\n%s", subject, message)))
 		if err != nil {
 			log.Printf("Could not send email notification: %v", err)
 		}

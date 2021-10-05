@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 
@@ -46,7 +47,7 @@ func initMqttClient() {
 }
 
 func initHaukClient() {
-	haukClient = hauk.New(config.GetHaukConfig())
+	haukClient = hauk.New(config.GetHaukConfig(), &http.Client{})
 }
 
 func initNotifier() {

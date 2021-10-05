@@ -9,6 +9,9 @@ const EndpointPost string = "api/post.php"
 // EndpointStop is the API path for stopping a session (POST)
 const EndpointStop string = "api/stop.php"
 
+// CreateResponseExpectedLineCount is the minimum number of lines expected in the CreateSession response body
+const CreateResponseExpectedLineCount = 4
+
 // CreateResponseIndexStatus is the line index of the status in the response body
 const CreateResponseIndexStatus = 0
 

@@ -11,7 +11,7 @@ import (
 
 type client struct {
 	config     Config
-	httpClient http.Client
+	httpClient HTTPClient
 }
 
 // Client is a client to the Hauk REST API
@@ -21,9 +21,13 @@ type Client interface {
 	PostLocation(sid string, params url.Values) error
 }
 
+// HTTPClient provides the HTTP client logic necessary for the Hauk client
+type HTTPClient interface {
+	PostForm(url string, data url.Values) (resp *http.Response, err error)
+}
+
 // New creates a new instance on a hauk client
-func New(config Config) Client {
-	httpClient := http.Client{}
+func New(config Config, httpClient HTTPClient) Client {
 	return &client{config: config, httpClient: httpClient}
 }
 
@@ -48,6 +52,12 @@ func (t *client) CreateSession() (Session, error) {
 	}
 
 	bodyLines := strings.Split(body, "\n")
+
+	err = validateCreateSessionResponseBody(bodyLines)
+	if err != nil {
+		return session, err
+	}
+
 	session.ID = bodyLines[CreateResponseIndexID]
 	session.SID = bodyLines[CreateResponseIndexSID]
 	session.URL = bodyLines[CreateResponseIndexURL]
@@ -98,6 +108,13 @@ func (t *client) PostLocation(sid string, params url.Values) error {
 	}
 	return err
 
+}
+
+func validateCreateSessionResponseBody(bodyLines []string) error {
+	if len(bodyLines) < CreateResponseExpectedLineCount {
+		return &MalformedResponseError{}
+	}
+	return nil
 }
 
 func (t *client) formatURL(endpoint string) string {
