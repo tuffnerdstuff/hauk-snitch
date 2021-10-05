@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -45,9 +46,10 @@ func handleInterrupt() {
 
 func handlePanic() {
 	if err := recover(); err != nil {
-		log.Printf("hauk-snitch panicked!\nerror: %v\nstacktrace: %v\n", err, debug.Stack())
+		message := fmt.Sprintf("hauk-snitch panicked and terminated!\nerror: %v\nstacktrace: %s\n", err, string(debug.Stack()))
+		log.Print(message)
 		if notifier != nil {
-			notifier.NotifyError(err)
+			notifier.NotifyError(message)
 		}
 	}
 }
