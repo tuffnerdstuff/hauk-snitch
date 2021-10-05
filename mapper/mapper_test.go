@@ -37,6 +37,10 @@ func (t *MockNotifier) NotifyNewSession(topic string, URL string) {
 	t.Called(topic, URL)
 }
 
+func (t *MockNotifier) NotifyError(err interface{}) {
+	t.Called(err)
+}
+
 func TestMapMessageToLocation_TypeNotLocation_Error(t *testing.T) {
 	// given: type is not location
 	body := make(map[string]interface{})
