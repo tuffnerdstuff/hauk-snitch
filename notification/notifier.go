@@ -9,6 +9,7 @@ import (
 // Notifier can send email notifications about events in the mapper
 type Notifier interface {
 	NotifyNewSession(topic string, URL string)
+	NotifyError(err interface{})
 }
 
 type notifier struct {
@@ -24,8 +25,8 @@ func (t *notifier) NotifyNewSession(topic string, URL string) {
 	t.sendMail(fmt.Sprintf("Forwarding %s to Hauk", topic), fmt.Sprintf("New session: %s", URL))
 }
 
-func (t *notifier) NotifyError(err error) {
-	t.sendMail("An error occurred", fmt.Sprintf("The following error occurred: %s", err.Error()))
+func (t *notifier) NotifyError(err interface{}) {
+	t.sendMail("An error occurred", fmt.Sprintf("The following error occurred: %v", err))
 }
 
 func (t *notifier) sendMail(subject string, message string) {

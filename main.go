@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 
 	"github.com/tuffnerdstuff/hauk-snitch/config"
 	"github.com/tuffnerdstuff/hauk-snitch/hauk"
@@ -19,6 +20,7 @@ var notifier notification.Notifier
 var mapper m.Mapper
 
 func main() {
+	defer handlePanic()
 	handleInterrupt()
 	config.LoadConfig()
 
@@ -39,6 +41,15 @@ func handleInterrupt() {
 			mqttClient.Disconnect()
 		}
 	}()
+}
+
+func handlePanic() {
+	if err := recover(); err != nil {
+		log.Printf("hauk-snitch panicked!\nerror: %v\nstacktrace: %v\n", err, debug.Stack())
+		if notifier != nil {
+			notifier.NotifyError(err)
+		}
+	}
 }
 
 func initMqttClient() {
