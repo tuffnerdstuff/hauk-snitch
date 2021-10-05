@@ -106,6 +106,7 @@ func (t *Mapper) createNewSIDForTopic(topic string) (string, error) {
 	// Create new Session
 	newSession, err := t.haukClient.CreateSession()
 	if err != nil {
+		t.notifier.NotifyError(fmt.Sprintf("Session could not be created: %v", err))
 		return "n/a", err
 	}
 	t.topicSessionMap[topic] = newSession
