@@ -61,7 +61,11 @@ func (t *notifier) NotifyNewSession(topic string, URL string) {
 
 	if t.config.Smtp.Enabled {
 		host := fmt.Sprintf("%s:%d", t.config.Smtp.Host, t.config.Smtp.Port)
-		err := smtp.SendMail(host, nil, t.config.Smtp.From, []string{t.config.Smtp.To}, []byte(fmt.Sprintf("Subject: Forwarding %s to Hauk\r\n\r\nNew session: %s", topic, URL)))
+		auth := nil
+		if t.config.Login != "" {
+			auth = smtp.PlainAuth("", t.config.Login, t.config.Password, t.config.Host)
+		}
+		err := smtp.SendMail(host, auth, t.config.Smtp.From, []string{t.config.Smtp.To}, []byte(fmt.Sprintf("Subject: Forwarding %s to Hauk\r\n\r\nNew session: %s", topic, URL)))
 		if err != nil {
 			log.Printf("Smtp: could not send email notification: %v", err)
 		}

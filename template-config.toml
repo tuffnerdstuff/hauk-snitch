@@ -25,6 +25,8 @@ start_session_manual = true
 enabled = true
 smtp_host = "mail"
 smtp_port = 25
+smtp_login = "noreply@example.com"
+smtp_password = "password"
 from = "noreply@example.com"
 to = "dude@example.com"
 
