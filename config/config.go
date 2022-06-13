@@ -61,11 +61,16 @@ func GetMapperConfig() mapper.Config {
 // GetNotificationConfig returns a struct containing email notification configuration
 func GetNotificationConfig() notification.Config {
 	var notificationConfig notification.Config
-	notificationConfig.Enabled = viper.GetBool("notification.enabled")
-	notificationConfig.Host = viper.GetString("notification.smtp_host")
-	notificationConfig.Port = viper.GetInt("notification.smtp_port")
-	notificationConfig.From = viper.GetString("notification.from")
-	notificationConfig.To = viper.GetString("notification.to")
+	notificationConfig.Smtp.Enabled = viper.GetBool("notification.smtp.enabled")
+	notificationConfig.Smtp.Host = viper.GetString("notification.smtp.smtp_host")
+	notificationConfig.Smtp.Port = viper.GetInt("notification.smtp.smtp_port")
+	notificationConfig.Smtp.From = viper.GetString("notification.smtp.from")
+	notificationConfig.Smtp.To = viper.GetString("notification.smtp.to")
+
+	notificationConfig.Gotify.Enabled = viper.GetBool("notification.gotify.enabled")
+	notificationConfig.Gotify.URL = viper.GetString("notification.gotify.url")
+	notificationConfig.Gotify.AppToken = viper.GetString("notification.gotify.app_token")
+	notificationConfig.Gotify.Priority = viper.GetInt("notification.gotify.priority")
 	return notificationConfig
 }
 
@@ -110,9 +115,14 @@ func setMapperDefaults() {
 }
 
 func setNotificationDefaults() {
-	viper.SetDefault("notification.enabled", false)
-	viper.SetDefault("notification.smtp_host", "localhost")
-	viper.SetDefault("notification.smtp_port", 25)
-	viper.SetDefault("notification.from", "noreply@hauk-snitch.local")
-	viper.SetDefault("notification.to", "")
+	viper.SetDefault("notification.smtp.enabled", false)
+	viper.SetDefault("notification.smtp.smtp_host", "localhost")
+	viper.SetDefault("notification.smtp.smtp_port", 25)
+	viper.SetDefault("notification.smtp.from", "noreply@hauk-snitch.local")
+	viper.SetDefault("notification.smtp.to", "")
+
+	viper.SetDefault("notification.gotify.enabled", false)
+	viper.SetDefault("notification.gotify.url", "")
+	viper.SetDefault("notification.gotify.app_token", "")
+	viper.SetDefault("notification.gotify.priority", 5)
 }
