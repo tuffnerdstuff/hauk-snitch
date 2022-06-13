@@ -34,10 +34,21 @@ func (t *notifier) NotifyNewSession(topic string, URL string) {
 		client := gotify.NewClient(myURL, &http.Client{})
 
 		params := message.NewCreateMessageParams()
+
+		extras := map[string]interface{}{
+			"client::display": map[string]interface{}{
+				"contentType": "text/markdown",
+			},
+			"client::notification": map[string]interface{}{
+				"click": map[string]interface{}{"url": URL},
+			},
+		}
+
 		params.Body = &models.MessageExternal{
 			Title:    "Hauk-Snitch",
-			Message:  fmt.Sprintf("Forwarding %s to Hauk\r\n\r\nNew session: %s", topic, URL),
+			Message:  fmt.Sprintf("Forwarding **%s** to Hauk\r\n\r\nNew session: [hauk link](%s)", topic, URL),
 			Priority: t.config.Gotify.Priority,
+			Extras:   extras,
 		}
 		_, err := client.Message.CreateMessage(params, auth.TokenAuth(t.config.Gotify.AppToken))
 
