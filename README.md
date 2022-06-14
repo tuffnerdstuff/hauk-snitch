@@ -42,7 +42,8 @@ anonymous = false
 
 ### Hauk
 
-The Hauk client you want your location forwarded to. Each Hauk session will expire after `duration` seconds and the Hauk frontend will refresh locations every `interval` seconds. If you are using authentication for your Hauk instance, then you also have to set `user` and `password` accordingly.
+The Hauk client you want your location forwarded to. Each Hauk session will expire after `duration` seconds and the Hauk frontend will refresh locations every `interval` seconds.
+If you are using authentication for your Hauk instance, then you also have to set `user` and `password` accordingly.
 
 ```
 [hauk]
@@ -79,6 +80,8 @@ and will be sent to the email address `to`.
 enabled=true
 smtp_host="mail"
 smtp_port=25
+smtp_login="noreply@example.com"
+smtp_password="password"
 from="noreply@example.com"
 to="dude@example.com"
 ```

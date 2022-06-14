@@ -64,6 +64,8 @@ func GetNotificationConfig() notification.Config {
 	notificationConfig.Smtp.Enabled = viper.GetBool("notification.smtp.enabled")
 	notificationConfig.Smtp.Host = viper.GetString("notification.smtp.smtp_host")
 	notificationConfig.Smtp.Port = viper.GetInt("notification.smtp.smtp_port")
+	notificationConfig.Smtp.Login = viper.GetString("notification.smtp_login")
+	notificationConfig.Smtp.Password = viper.GetString("notification.smtp_password")
 	notificationConfig.Smtp.From = viper.GetString("notification.smtp.from")
 	notificationConfig.Smtp.To = viper.GetString("notification.smtp.to")
 
@@ -118,6 +120,8 @@ func setNotificationDefaults() {
 	viper.SetDefault("notification.smtp.enabled", false)
 	viper.SetDefault("notification.smtp.smtp_host", "localhost")
 	viper.SetDefault("notification.smtp.smtp_port", 25)
+	viper.SetDefault("notification.smtp.smtp_login", "")
+	viper.SetDefault("notification.smtp.smtp_password", "")
 	viper.SetDefault("notification.smtp.from", "noreply@hauk-snitch.local")
 	viper.SetDefault("notification.smtp.to", "")
 

@@ -12,6 +12,8 @@ type SMTPConfig struct {
 	Port    int
 	From    string
 	To      string
+	Login    string
+	Password string
 }
 
 type GotifyConfig struct {
