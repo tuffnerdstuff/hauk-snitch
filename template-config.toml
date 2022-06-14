@@ -21,9 +21,15 @@ start_session_auto = true
 stop_session_auto = true
 start_session_manual = true
 
-[notification]
-enabled=true
-smtp_host="mail"
-smtp_port=25
-from="noreply@example.com"
-to="dude@example.com"
+[notification.smtp]
+enabled = true
+smtp_host = "mail"
+smtp_port = 25
+from = "noreply@example.com"
+to = "dude@example.com"
+
+[notification.gotify]
+enabled = false
+url = "http://gotify"
+app_token = "token"
+priority = 5
