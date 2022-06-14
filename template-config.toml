@@ -13,6 +13,8 @@ port = 443
 tls = true
 duration = 3600 # 1 hour
 interval = 1    # 1 second
+user = ""
+password = ""
 
 [mapper]
 start_session_auto = true
