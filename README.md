@@ -42,7 +42,7 @@ anonymous = false
 
 ### Hauk
 
-The Hauk client you want your location forwarded to. Each Hauk session will expire after `duration` seconds and the Hauk frontend will refresh locations every `interval` seconds.
+The Hauk client you want your location forwarded to. Each Hauk session will expire after `duration` seconds and the Hauk frontend will refresh locations every `interval` seconds. If you are using authentication for your Hauk instance, then you also have to set `user` and `password` accordingly.
 
 ```
 [hauk]
@@ -51,6 +51,8 @@ port = 443
 tls = true
 duration = 3600 # 1 hour
 interval = 1    # 1 second
+user = "myusername"
+password = "mypassword"
 ```
 
 ### Mapper

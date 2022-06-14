@@ -33,6 +33,7 @@ func (t *client) CreateSession() (Session, error) {
 	params := url.Values{
 		"dur": {strconv.Itoa(t.config.Duration)},
 		"int": {strconv.Itoa(t.config.Interval)},
+		"usr": {t.config.User},
 		"pwd": {t.config.Password},
 	}
 	response, err := t.httpClient.PostForm(t.formatURL(EndpointCreate), params)
