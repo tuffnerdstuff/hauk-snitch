@@ -40,7 +40,8 @@ func (t *notifier) NotifyNewSession(topic string, URL string) {
 				"contentType": "text/markdown",
 			},
 			"client::notification": map[string]interface{}{
-				"click": map[string]interface{}{"url": URL},
+				"click":   map[string]interface{}{"url": URL},
+				"actions": map[string]interface{}{"share": URL},
 			},
 		}
 
@@ -62,8 +63,8 @@ func (t *notifier) NotifyNewSession(topic string, URL string) {
 	if t.config.Smtp.Enabled {
 		host := fmt.Sprintf("%s:%d", t.config.Smtp.Host, t.config.Smtp.Port)
 		var auth smtp.Auth
-	        if t.config.Smtp.Login != "" {
-                       auth = smtp.PlainAuth("", t.config.Smtp.Login, t.config.Smtp.Password, t.config.Smtp.Host)
+		if t.config.Smtp.Login != "" {
+			auth = smtp.PlainAuth("", t.config.Smtp.Login, t.config.Smtp.Password, t.config.Smtp.Host)
 		}
 		err := smtp.SendMail(host, auth, t.config.Smtp.From, []string{t.config.Smtp.To}, []byte(fmt.Sprintf("Subject: Forwarding %s to Hauk\r\n\r\nNew session: %s", topic, URL)))
 		if err != nil {
